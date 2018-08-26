@@ -3,14 +3,110 @@ Self-Driving Car Engineer Nanodegree Program
 
 ### Solution
 The end result video can be found here:
-![Return](https://github.com/eshnil2000/CarND-Path_Planning/blob/master/Images/video480.mp4)
+![Video](https://github.com/eshnil2000/CarND-Path_Planning/blob/master/Images/video480.mp4)
 
 ### A snapshot of course completion can be found here:
 ![Return](https://github.com/eshnil2000/CarND-Path_Planning/blob/master/Images/course.png)
 
-I used the starter code provided to implement a simple path planner. THe major steps involved were:
-#### 
+#### I used the starter code provided to implement a simple path planner. The major steps involved were:
+#### Find location of the Ego Car 
+Using the "d" value of the Frenet co-ordinate system received from the simulator, the Ego car lane was detected. 
+```
+// Location of Ego car
+                if ( car_d > 0 && car_d < 4 ) {
+                   lane = 0;
+                } else if ( car_d > 4 && car_d < 8 ) {
+                   lane = 1;
+                } else if ( car_d > 8 && car_d < 12 ) {
+                   lane = 2;
+                }
+                  else {
+                     lane=1;
+                  }
+```
+#### Find location of other cars based on sensor data.
+Using sensor data received for each of the cars nearby, use their "d" co-ordinate again to find which lanes the cars are in.
+```
+for ( int i = 0; i < sensor_fusion.size(); i++ ) {
+                float d = sensor_fusion[i][6];
+                double check_car_s = sensor_fusion[i][5];
+                if ( d > 0 && d < 4 ) {
+                   other_car_lane = 0;
+                } else if ( d > 4 && d < 8 ) {
+                   other_car_lane = 1;
+                } else if ( d > 8 && d < 12 ) {
+                   other_car_lane = 2;
+                }
+                  else {
+                     continue;
+                  }
+```
 
+#### Decide if any of the cars are in the same lane as Ego vehicle, AND within 30 meters of Ego vehicle, by checking the "s" value of the Frenet coordinate. Also estimate the future position of the car, if it's too close, or will be close in the near future, raise a flag "too close"
+
+```
+if(d<(2+4*lane+2) && d>(2+4*lane-2)) {
+                // Find car speed.
+                    double vx = sensor_fusion[i][3];
+                    double vy = sensor_fusion[i][4];
+                    double check_speed = sqrt(vx*vx + vy*vy);
+                    
+                    // Estimate car s position after executing previous trajectory.
+                    check_car_s += ((double)prev_size*0.02*check_speed);
+
+                    if(((check_car_s>=car_s) && ((check_car_s -car_s) <=30))) {
+                      too_close=1;
+                      std::cout<<"too close" <<std::endl;
+                    } else{
+                };
+```
+
+#### Using similar logic, decide if there are any cars to the immediate right or left lane within 30 meters in the near future
+
+```
+} else{
+                //car is to the left
+                if((check_car_s>=car_s) && (lane- other_car_lane ==1) && (check_car_s -car_s)<=30){
+                  car_to_the_left=true;
+                  std::cout<<"car to the left" <<std::endl;
+                }
+                //car is to the right
+                if((check_car_s>=car_s) && (other_car_lane -lane ==1) && (check_car_s -car_s)<=30){
+                  car_to_the_right=true;
+                  std::cout<<"car to the right" <<std::endl;
+                }  
+              }
+
+            };
+```
+
+#### Decide action: if car is too close, slow down, or change lane if no other cars to left or right
+
+```
+            if(too_close){
+              ref_vel=ref_vel-max_acc;
+              if (ref_vel<min_vel){
+                  ref_vel=min_vel;
+              }
+              if(!car_to_the_right && lane<2)
+              {
+                lane+=1;
+                std::cout<<"changing lane to right now in lane#" << lane <<std::endl;
+              } else if (!car_to_the_left && lane>0)
+              {
+                lane-=1;
+                std::cout<<"changing lane to left now in lane #" << lane <<std::endl;
+              }
+            } else {
+              ref_vel=ref_vel+max_acc;
+              if (ref_vel>max_vel){
+                  ref_vel=max_vel;
+              }
+            }
+
+```
+
+#### Use code from the Q&A to determine the previous points used by the simulator, convert from Frenet co-ordinates back to XY coordinates, set up a few target points based on which lane the Ego car should be in, and create a spline to draw a smooth path to the end goal in the future.
 
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).
