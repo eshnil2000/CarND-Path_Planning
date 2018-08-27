@@ -199,7 +199,7 @@ int main() {
 
   // Car's lane. Starting at middle lane.
   int lane = 1;
-  double ref_vel=49.5;
+  double ref_vel=0;
   double max_vel=49.5;
   double min_vel = 19.5;
 
@@ -331,7 +331,7 @@ int main() {
             } else {
               ref_vel=ref_vel+max_acc;
               if (ref_vel>max_vel){
-                  ref_vel=max_vel;
+                  ref_vel=ref_vel-max_acc;
               }
             }
 
